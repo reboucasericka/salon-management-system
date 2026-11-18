@@ -107,7 +107,7 @@ Rotas antigas `/admin/*` e `/client/*` redirecionam automaticamente para a nova 
 - Token Bearer guardado em `localStorage`
 - Interceptor Axios adiciona `Authorization` automaticamente
 - Rotas protegidas por perfil (`admin`, `professional`, `client`)
-- Site público usa `body.legacy-site` + Bootstrap/Slick; painel usa Tailwind isolado
+- Site público usa `body.legacy-site` + Bootstrap (temporário); painel usa Tailwind isolado
 
 | `/panel/admin/sales` | admin, professional | Vendas (POS) |
 | `/panel/admin/cash` | admin, professional | Caixa |

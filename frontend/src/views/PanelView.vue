@@ -59,6 +59,12 @@ const modules = [
     roles: ['admin', 'professional'],
   },
   {
+    to: { name: 'admin-suppliers' },
+    title: 'Fornecedores',
+    description: 'Fornecedores associados aos produtos.',
+    roles: ['admin'],
+  },
+  {
     to: { name: 'admin-stock' },
     title: 'Stock',
     description: 'Entradas, saídas e movimentações.',
@@ -82,6 +88,7 @@ const modules = [
     description: 'Contactos do site público.',
     roles: ['admin'],
   },
+
   {
     to: '/booking',
     title: 'Agendamento online',
@@ -126,8 +133,8 @@ async function handleLogout() {
         <p class="text-sm text-[#6B7280]">Olá, {{ auth.fullName }}</p>
         <h1 class="mt-1 text-2xl font-semibold text-[#1F2937]">Escolha um módulo</h1>
         <p class="mt-2 text-sm text-[#6B7280]">
-          Perfil: <span class="font-medium text-[#374151]">{{ auth.user?.role_label }}</span>
-          · {{ auth.user?.email }}
+          Perfil: <span class="font-medium text-[#374151]">{{ auth.user?.role_label }}</span> ·
+          {{ auth.user?.email }}
         </p>
       </div>
 

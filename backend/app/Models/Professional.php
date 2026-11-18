@@ -56,7 +56,18 @@ class Professional extends Model
     public function services(): BelongsToMany
     {
         return $this->belongsToMany(Service::class)
+            ->withPivot('commission_percentage')
             ->withTimestamps();
+    }
+
+    public function payables(): HasMany
+    {
+        return $this->hasMany(Payable::class);
+    }
+
+    public function receivables(): HasMany
+    {
+        return $this->hasMany(Receivable::class);
     }
 
     public function imageUrl(): ?string

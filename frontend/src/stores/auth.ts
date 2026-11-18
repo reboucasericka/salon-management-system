@@ -94,6 +94,26 @@ export const useAuthStore = defineStore('auth', () => {
     return data.user
   }
 
+  async function updateProfile(payload: {
+    first_name: string
+    last_name: string
+    email: string
+    phone?: string | null
+  }) {
+    const { data } = await api.patch<{ message: string; user: User }>('/api/v1/auth/profile', payload)
+    user.value = data.user
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+    return data.user
+  }
+
+  async function updatePassword(payload: {
+    current_password: string
+    password: string
+    password_confirmation: string
+  }) {
+    await api.put('/api/v1/auth/password', payload)
+  }
+
   async function logout() {
     try {
       await api.post('/api/v1/auth/logout')
@@ -122,6 +142,8 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     fetchMe,
+    updateProfile,
+    updatePassword,
     logout,
     clear,
     homeRouteForRole,

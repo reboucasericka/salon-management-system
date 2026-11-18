@@ -23,6 +23,12 @@ class ServiceResource extends JsonResource
             'image_url' => $this->imageUrl(),
             'is_active' => $this->is_active,
             'appointments_count' => $this->whenCounted('appointments'),
+            'commission_percentage' => $this->when(
+                $this->pivot !== null,
+                fn () => $this->pivot->commission_percentage !== null
+                    ? number_format((float) $this->pivot->commission_percentage, 2, '.', '')
+                    : null,
+            ),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

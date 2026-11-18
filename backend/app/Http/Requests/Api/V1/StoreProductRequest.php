@@ -25,6 +25,11 @@ class StoreProductRequest extends ProductRequest
                 'integer',
                 Rule::exists('product_categories', 'id')->where(fn ($q) => $q->where('is_active', true)),
             ],
+            'supplier_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('suppliers', 'id')->where(fn ($q) => $q->where('is_active', true)),
+            ],
             'price' => ['required_without:sale_price', 'numeric', 'min:0'],
             'sale_price' => ['required_without:price', 'numeric', 'min:0'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],

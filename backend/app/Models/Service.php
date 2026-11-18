@@ -43,9 +43,15 @@ class Service extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function receivables(): HasMany
+    {
+        return $this->hasMany(Receivable::class);
+    }
+
     public function professionals(): BelongsToMany
     {
         return $this->belongsToMany(Professional::class)
+            ->withPivot('commission_percentage')
             ->withTimestamps();
     }
 

@@ -47,6 +47,7 @@ const servicesModalOpen = ref(false)
 const servicesTarget = ref<Professional | null>(null)
 const allServices = ref<Service[]>([])
 const selectedServiceIds = ref<number[]>([])
+const serviceCommissions = ref<Record<number, string>>({})
 const servicesLoading = ref(false)
 const servicesSaving = ref(false)
 const servicesSearch = ref('')
@@ -211,6 +212,9 @@ function closeModal() {
 function toggleServiceSelection(serviceId: number) {
   if (selectedServiceIds.value.includes(serviceId)) {
     selectedServiceIds.value = selectedServiceIds.value.filter((id) => id !== serviceId)
+    const next = { ...serviceCommissions.value }
+    delete next[serviceId]
+    serviceCommissions.value = next
   } else {
     selectedServiceIds.value = [...selectedServiceIds.value, serviceId]
   }
@@ -218,6 +222,21 @@ function toggleServiceSelection(serviceId: number) {
 
 function isServiceSelected(serviceId: number) {
   return selectedServiceIds.value.includes(serviceId)
+}
+
+function setServiceCommission(serviceId: number, value: string) {
+  serviceCommissions.value = {
+    ...serviceCommissions.value,
+    [serviceId]: value,
+  }
+}
+
+function clearVisibleSelection() {
+  const visible = new Set(visibleServiceIds.value)
+  selectedServiceIds.value = selectedServiceIds.value.filter((id) => !visible.has(id))
+  const next = { ...serviceCommissions.value }
+  for (const id of visible) delete next[id]
+  serviceCommissions.value = next
 }
 
 function setSelectionFilter(next: 'selected' | 'unselected') {
@@ -241,11 +260,6 @@ function selectAllVisible() {
   selectedServiceIds.value = [...selected]
 }
 
-function clearVisibleSelection() {
-  const visible = new Set(visibleServiceIds.value)
-  selectedServiceIds.value = selectedServiceIds.value.filter((id) => !visible.has(id))
-}
-
 function onSelectAllVisibleChange(event: Event) {
   const checked = (event.target as HTMLInputElement).checked
   if (checked) selectAllVisible()
@@ -267,6 +281,7 @@ async function openServicesModal(pro: Professional) {
   collapsedCategories.value = {}
   servicesLoading.value = true
   selectedServiceIds.value = []
+  serviceCommissions.value = {}
 
   try {
     const [catalog, assigned] = await Promise.all([
@@ -275,6 +290,13 @@ async function openServicesModal(pro: Professional) {
     ])
     allServices.value = (catalog.data ?? []).filter((service) => service.is_active)
     selectedServiceIds.value = assigned.map((service) => service.id)
+    const commissions: Record<number, string> = {}
+    for (const service of assigned) {
+      if (service.commission_percentage != null && service.commission_percentage !== '') {
+        commissions[service.id] = String(service.commission_percentage)
+      }
+    }
+    serviceCommissions.value = commissions
   } catch (err) {
     servicesError.value = getErrorMessage(err, 'Não foi possível carregar os serviços.')
     ui.error(servicesError.value)
@@ -299,12 +321,20 @@ async function saveServices() {
   servicesSaving.value = true
   servicesError.value = ''
   try {
-    const result = await syncProfessionalServices(servicesTarget.value.id, selectedServiceIds.value)
+    const payload = selectedServiceIds.value.map((serviceId) => {
+      const raw = serviceCommissions.value[serviceId]
+      const trimmed = raw?.trim() ?? ''
+      return {
+        service_id: serviceId,
+        commission_percentage: trimmed === '' ? null : Number(trimmed),
+      }
+    })
+
+    const result = await syncProfessionalServices(servicesTarget.value.id, payload)
     ui.success('Serviços atualizados.')
     servicesModalOpen.value = false
     servicesTarget.value = null
     await load()
-    // Keep count in sync even if list cache is stale.
     void result
   } catch (err) {
     if (import.meta.env.DEV) {
@@ -693,12 +723,15 @@ onMounted(load)
             <div>
               <AppInput
                 v-model="form.commission_percentage"
-                label="Comissão (%)"
+                label="Comissão padrão (%)"
                 type="number"
                 min="0"
                 max="100"
                 step="0.01"
               />
+              <p class="mt-1 text-xs text-zinc-500">
+                Usada quando o serviço não possui uma comissão específica.
+              </p>
               <p v-if="fieldErrors.commission_percentage" class="mt-1 text-sm text-red-600">
                 {{ fieldErrors.commission_percentage }}
               </p>
@@ -890,21 +923,48 @@ onMounted(load)
 
               <ul v-show="!isCategoryCollapsed(group.name)" class="mt-1 space-y-0.5">
                 <li v-for="service in group.services" :key="service.id">
-                  <label
-                    class="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-zinc-50 focus-within:ring-2 focus-within:ring-brand-500/30"
+                  <div
+                    class="flex flex-col gap-2 rounded-md px-2 py-2 hover:bg-zinc-50 sm:flex-row sm:items-center sm:gap-3"
                   >
-                    <input
-                      type="checkbox"
-                      class="rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
-                      :checked="isServiceSelected(service.id)"
-                      :aria-label="`Selecionar ${service.name}`"
-                      @change="toggleServiceSelection(service.id)"
-                    />
-                    <span class="min-w-0 flex-1 text-sm text-zinc-900">{{ service.name }}</span>
-                    <span class="shrink-0 text-xs tabular-nums text-zinc-500">
-                      {{ service.duration_minutes }} min
-                    </span>
-                  </label>
+                    <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        class="rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
+                        :checked="isServiceSelected(service.id)"
+                        :aria-label="`Selecionar ${service.name}`"
+                        @change="toggleServiceSelection(service.id)"
+                      />
+                      <span class="min-w-0 flex-1 text-sm text-zinc-900">{{ service.name }}</span>
+                      <span class="shrink-0 text-xs tabular-nums text-zinc-500">
+                        {{ service.duration_minutes }} min
+                      </span>
+                    </label>
+                    <div
+                      v-if="isServiceSelected(service.id)"
+                      class="flex items-center gap-2 pl-7 sm:pl-0"
+                    >
+                      <label class="sr-only" :for="`commission-${service.id}`">
+                        Comissão de {{ service.name }}
+                      </label>
+                      <input
+                        :id="`commission-${service.id}`"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        class="w-20 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm tabular-nums outline-none ring-brand-500 focus:ring-2"
+                        :value="serviceCommissions[service.id] ?? ''"
+                        placeholder="Padrão"
+                        @input="
+                          setServiceCommission(
+                            service.id,
+                            ($event.target as HTMLInputElement).value,
+                          )
+                        "
+                      />
+                      <span class="text-xs text-zinc-500">%</span>
+                    </div>
+                  </div>
                 </li>
               </ul>
             </section>

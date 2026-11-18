@@ -10,11 +10,28 @@
   --admin-accent-light: #f7ede8;
   --admin-accent-muted: #e6c6b6;
   --admin-sidebar-bg: #f7f5f2;
-  --admin-sidebar-width: 280px;
+  --admin-sidebar-width: 256px;
+  --admin-content-max: 1680px;
+  --admin-content-pad-x: 1rem;
+  --admin-content-pad-y: 1.25rem;
   display: flex;
   min-height: 100vh;
   width: 100%;
   color: var(--admin-text);
+}
+
+@media (min-width: 640px) {
+  .admin-panel {
+    --admin-content-pad-x: 1.5rem;
+    --admin-content-pad-y: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-panel {
+    --admin-content-pad-x: 2rem;
+    --admin-content-pad-y: 1.5rem;
+  }
 }
 
 .admin-panel .admin-sidebar {
@@ -25,9 +42,48 @@
   scrollbar-color: #d1d5db transparent;
 }
 
-.admin-panel .admin-content-area {
+.admin-panel .admin-main-area {
+  display: flex;
   flex: 1 1 auto;
   min-width: 0;
+  flex-direction: column;
+  background-color: var(--admin-bg);
+}
+
+.admin-panel .admin-page-container {
+  width: 100%;
+  max-width: var(--admin-content-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--admin-content-pad-x);
+  padding-right: var(--admin-content-pad-x);
+}
+
+.admin-panel .admin-main-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-top: var(--admin-content-pad-y);
+  padding-bottom: var(--admin-content-pad-y);
+  background-color: var(--admin-bg);
+}
+
+.admin-panel .admin-header {
+  position: sticky;
+  top: 0;
+  left: auto;
+  right: auto;
+  padding: 0;
+  margin: 0;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--admin-border);
+  z-index: 30;
+}
+
+.admin-panel .admin-card {
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+  background-color: var(--admin-surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
 }
 
 .admin-panel a:not(.admin-nav-link):not(.admin-btn-link):not(.admin-action-link) {
@@ -40,6 +96,7 @@
   color: #374151 !important;
   white-space: nowrap;
   overflow: visible;
+  line-height: 1.25;
 }
 
 .admin-panel .admin-nav-link:hover {
@@ -55,9 +112,10 @@
 }
 
 .admin-panel .admin-nav-group {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: #a86548;
 }
 
@@ -75,10 +133,6 @@
 .admin-panel .admin-action-link:hover {
   background-color: #faf6f4;
   color: #c97d5d;
-}
-
-.admin-panel .admin-content-bg {
-  background-color: var(--admin-bg);
 }
 
 .admin-panel .admin-table thead {

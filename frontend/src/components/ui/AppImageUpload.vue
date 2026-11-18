@@ -89,7 +89,7 @@ function keepCurrent() {
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
       <button
         type="button"
-        class="h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50"
+        class="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50"
         @click="openPicker"
       >
         <img :src="previewSrc" alt="" class="h-full w-full object-cover" />

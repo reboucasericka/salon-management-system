@@ -19,6 +19,7 @@ class Product extends Model
         'barcode',
         'category',
         'product_category_id',
+        'supplier_id',
         'price',
         'cost_price',
         'stock_quantity',
@@ -41,6 +42,11 @@ class Product extends Model
     public function productCategory(): BelongsTo
     {
         return $this->belongsTo(ProductCategory::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     public function stockMovements(): HasMany

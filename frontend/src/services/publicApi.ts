@@ -8,6 +8,7 @@ import type {
   Product,
   ProductCategory,
   PublicProfessional,
+  PublicSalonSettings,
   Service,
   ServiceCategory,
 } from '@/types/api'
@@ -87,4 +88,9 @@ export type ContactMessagePayload = {
 export async function submitContactMessage(payload: ContactMessagePayload) {
   const { data } = await api.post<ApiMessageResponse<ContactMessage>>('/api/v1/public/contact', payload)
   return data
+}
+
+export async function fetchPublicSettings() {
+  const { data } = await api.get<{ data: PublicSalonSettings }>('/api/v1/public/settings')
+  return data.data
 }

@@ -11,7 +11,9 @@ use App\Models\Client;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\User;
+use App\Services\AppointmentGoogleSyncService;
 use App\Services\AppointmentService;
+use App\Services\BookingEmailService;
 use App\Services\ProfessionalService;
 use App\Services\ProfessionalServiceAssignmentService;
 use Carbon\Carbon;
@@ -27,6 +29,8 @@ class PublicBookingController extends Controller
         private readonly AppointmentService $appointmentService,
         private readonly ProfessionalService $professionalService,
         private readonly ProfessionalServiceAssignmentService $assignmentService,
+        private readonly BookingEmailService $bookingEmailService,
+        private readonly AppointmentGoogleSyncService $googleSync,
     ) {}
 
     public function professionals(Request $request): AnonymousResourceCollection
@@ -136,9 +140,14 @@ class PublicBookingController extends Controller
             'is_active' => true,
         ]);
 
+        $appointment->load(['client', 'service', 'professional']);
+        $this->bookingEmailService->sendConfirmation($appointment);
+        $this->googleSync->sync($appointment->fresh(['client', 'service', 'professional']));
+        $appointment = $appointment->fresh()->load(['client', 'service', 'professional']);
+
         return response()->json([
             'message' => 'Agendamento criado com sucesso.',
-            'data' => new AppointmentResource($appointment->load(['client', 'service', 'professional'])),
+            'data' => new AppointmentResource($appointment),
         ], 201);
     }
 

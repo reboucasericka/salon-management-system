@@ -1,61 +1,29 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import $ from 'jquery'
-import 'slick-carousel'
+import HomeHeroSlider, { type HomeHeroSlide } from '@/components/public/HomeHeroSlider.vue'
 import { IMAGES } from '@/lib/images'
 
-function initSlider() {
-  const el = document.querySelector('.slider_home')
-  if (!el) return
-  const $slider = $(el)
-  if ($slider.hasClass('slick-initialized')) return
-  ;($slider as unknown as { slick: (opts: object) => void }).slick({
-    dots: true,
-    arrows: false,
-    infinite: true,
-    autoplay: true,
-    autoplaySpeed: 4000,
-    fade: true,
-    cssEase: 'linear',
-  })
-}
-
-function destroySlider() {
-  const el = document.querySelector('.slider_home')
-  if (!el) return
-  const $slider = $(el)
-  if ($slider.hasClass('slick-initialized')) {
-    ;($slider as unknown as { slick: (method: string) => void }).slick('unslick')
-  }
-}
-
-onMounted(async () => {
-  await nextTick()
-  initSlider()
-})
-
-onBeforeUnmount(() => {
-  destroySlider()
-})
+const heroSlides: HomeHeroSlide[] = [
+  {
+    image: IMAGES.slider1,
+    alt: 'Ewellin Jordão',
+    titleOne: 'O olhar que marca',
+    titleTwo: '• Ewellin •',
+    titleThree: 'Portugal • DESDE 2021',
+  },
+  {
+    image: IMAGES.slider2,
+    alt: 'Ewellin Jordão',
+    titleOne: 'Revolucionar',
+    titleTwo: '• O OLHAR •',
+    titleThree: 'visite-nos • numa das nossas lojas',
+  },
+]
 </script>
 
 <template>
   <div class="home">
-    <section class="slider_home">
-      <div class="item">
-        <img :src="IMAGES.slider1" alt="Ewellin Jordão" />
-        <div class="title_one animated fadeInDown">O olhar que marca</div>
-        <div class="title_two animated fadeInRight">• Ewellin •</div>
-        <div class="title_three animated fadeInUp">Portugal • DESDE 2021</div>
-      </div>
-      <div class="item">
-        <img :src="IMAGES.slider2" alt="Ewellin Jordão" />
-        <div class="title_one animated fadeInDown">Revolucionar</div>
-        <div class="title_two animated fadeInRight">• O OLHAR •</div>
-        <div class="title_three animated fadeInUp">visite-nos • numa das nossas lojas</div>
-      </div>
-    </section>
+    <HomeHeroSlider :slides="heroSlides" />
 
     <section class="about py-5">
       <div class="container text-center">

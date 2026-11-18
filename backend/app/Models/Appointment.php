@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Appointment extends Model
 {
@@ -36,6 +37,7 @@ class Appointment extends Model
             'total_price' => 'decimal:2',
             'is_active' => 'boolean',
             'reminder_sent' => 'boolean',
+            'google_synced_at' => 'datetime',
         ];
     }
 
@@ -52,5 +54,10 @@ class Appointment extends Model
     public function professional(): BelongsTo
     {
         return $this->belongsTo(Professional::class);
+    }
+
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(AppointmentReminder::class);
     }
 }

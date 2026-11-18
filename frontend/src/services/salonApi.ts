@@ -5,20 +5,31 @@ import type {
   CashRegisterSummary,
   CashReport,
   Client,
+  CommissionPreviewResponse,
   ContactMessage,
   DashboardData,
   Notification,
   Paginated,
+  Payable,
+  PayablePayload,
   Product,
   ProductCategory,
   Professional,
   ProfessionalPayload,
   ProfessionalSchedule,
   ProfessionalSchedulePayload,
+  ProfessionalServiceSyncItem,
+  Receivable,
+  ReceivablePayload,
   Sale,
+  SalonSettings,
+  SalonSettingsPayload,
+  GoogleCalendarStatus,
+  GoogleCalendarListItem,
   Service,
   ServiceCategory,
   StockMovement,
+  Supplier,
 } from '@/types/api'
 
 export type ListParams = Record<string, string | number | boolean | undefined>
@@ -121,6 +132,100 @@ export async function deleteProductCategory(id: number) {
   await api.delete(`/api/v1/product-categories/${id}`)
 }
 
+export async function fetchSuppliers(params?: ListParams) {
+  const { data } = await api.get<Paginated<Supplier>>('/api/v1/suppliers', { params })
+  return data
+}
+
+export async function fetchSupplier(id: number) {
+  const { data } = await api.get<{ data: Supplier }>(`/api/v1/suppliers/${id}`)
+  return data.data
+}
+
+export async function createSupplier(payload: Partial<Supplier>) {
+  const { data } = await api.post<ApiMessageResponse<Supplier>>('/api/v1/suppliers', payload)
+  return data.data
+}
+
+export async function updateSupplier(id: number, payload: Partial<Supplier>) {
+  const { data } = await api.put<ApiMessageResponse<Supplier>>(`/api/v1/suppliers/${id}`, payload)
+  return data.data
+}
+
+export async function deleteSupplier(id: number) {
+  await api.delete(`/api/v1/suppliers/${id}`)
+}
+
+export async function fetchPayables(params?: ListParams) {
+  const { data } = await api.get<Paginated<Payable>>('/api/v1/payables', { params })
+  return data
+}
+
+export async function fetchPayable(id: number) {
+  const { data } = await api.get<{ data: Payable }>(`/api/v1/payables/${id}`)
+  return data.data
+}
+
+export async function createPayable(payload: PayablePayload) {
+  const { data } = await api.post<ApiMessageResponse<Payable>>('/api/v1/payables', payload)
+  return data.data
+}
+
+export async function updatePayable(id: number, payload: Partial<PayablePayload>) {
+  const { data } = await api.put<ApiMessageResponse<Payable>>(`/api/v1/payables/${id}`, payload)
+  return data.data
+}
+
+export async function deletePayable(id: number) {
+  await api.delete(`/api/v1/payables/${id}`)
+}
+
+export async function markPayablePaid(id: number, payload?: { paid_at?: string | null }) {
+  const { data } = await api.post<ApiMessageResponse<Payable>>(
+    `/api/v1/payables/${id}/pay`,
+    payload ?? {},
+  )
+  return data.data
+}
+
+export async function fetchReceivables(params?: ListParams) {
+  const { data } = await api.get<Paginated<Receivable>>('/api/v1/receivables', { params })
+  return data
+}
+
+export async function fetchReceivable(id: number) {
+  const { data } = await api.get<{ data: Receivable }>(`/api/v1/receivables/${id}`)
+  return data.data
+}
+
+export async function createReceivable(payload: ReceivablePayload) {
+  const { data } = await api.post<ApiMessageResponse<Receivable>>('/api/v1/receivables', payload)
+  return data.data
+}
+
+export async function updateReceivable(id: number, payload: Partial<ReceivablePayload>) {
+  const { data } = await api.put<ApiMessageResponse<Receivable>>(
+    `/api/v1/receivables/${id}`,
+    payload,
+  )
+  return data.data
+}
+
+export async function deleteReceivable(id: number) {
+  await api.delete(`/api/v1/receivables/${id}`)
+}
+
+export async function markReceivableReceived(
+  id: number,
+  payload?: { received_at?: string | null },
+) {
+  const { data } = await api.post<ApiMessageResponse<Receivable>>(
+    `/api/v1/receivables/${id}/receive`,
+    payload ?? {},
+  )
+  return data.data
+}
+
 export async function fetchProfessionals(params?: ListParams) {
   const { data } = await api.get<Paginated<Professional>>('/api/v1/professionals', {
     params: { per_page: 100, ...params },
@@ -171,12 +276,43 @@ export async function fetchProfessionalServices(professionalId: number) {
   return data.data
 }
 
-export async function syncProfessionalServices(professionalId: number, serviceIds: number[]) {
+export async function syncProfessionalServices(
+  professionalId: number,
+  payload: number[] | ProfessionalServiceSyncItem[],
+) {
+  const isLegacyIds =
+    Array.isArray(payload) && (payload.length === 0 || typeof payload[0] === 'number')
+  const body = isLegacyIds
+    ? { service_ids: payload as number[] }
+    : { services: payload as ProfessionalServiceSyncItem[] }
+
   const { data } = await api.put<{
     message: string
     data: { professional_id: number; services: Service[]; services_count: number }
-  }>(`/api/v1/professionals/${professionalId}/services`, { service_ids: serviceIds })
+  }>(`/api/v1/professionals/${professionalId}/services`, body)
   return data.data
+}
+
+export async function fetchCommissionsPreview(params?: ListParams) {
+  const { data } = await api.get<CommissionPreviewResponse>('/api/v1/commissions', { params })
+  return data
+}
+
+export async function generateCommissions(payload: {
+  appointment_ids?: number[]
+  from?: string
+  to?: string
+  professional_id?: number
+}) {
+  const { data } = await api.post<{
+    message: string
+    data: {
+      created: Array<{ appointment_id: number; payable_id: number; amount: string }>
+      skipped: Array<{ appointment_id: number; reason: string; payable_id?: number }>
+    }
+    meta: { created_count: number; skipped_count: number }
+  }>('/api/v1/commissions/generate', payload)
+  return data
 }
 
 export async function fetchProfessionalSchedules(params?: ListParams) {
@@ -411,4 +547,42 @@ export async function fetchCashReport(date?: string) {
     params: date ? { date } : undefined,
   })
   return data.data
+}
+
+export async function fetchSettings() {
+  const { data } = await api.get<{ data: SalonSettings }>('/api/v1/settings')
+  return data.data
+}
+
+export async function updateSettings(payload: SalonSettingsPayload) {
+  const { data } = await api.patch<ApiMessageResponse<SalonSettings>>('/api/v1/settings', payload)
+  return data.data as SalonSettings
+}
+
+export async function fetchGoogleCalendarStatus() {
+  const { data } = await api.get<{ data: GoogleCalendarStatus }>('/api/v1/google-calendar/status')
+  return data.data
+}
+
+export async function connectGoogleCalendar() {
+  const { data } = await api.get<{ data: { authorization_url: string } }>('/api/v1/google-calendar/connect')
+  return data.data
+}
+
+export async function fetchGoogleCalendars() {
+  const { data } = await api.get<{ data: GoogleCalendarListItem[] }>('/api/v1/google-calendar/calendars')
+  return data.data
+}
+
+export async function selectGoogleCalendar(payload: { calendar_id: string; calendar_name?: string }) {
+  const { data } = await api.put<ApiMessageResponse<{ calendar_id: string; calendar_name: string | null; ready: boolean }>>(
+    '/api/v1/google-calendar/calendar',
+    payload,
+  )
+  return data
+}
+
+export async function disconnectGoogleCalendar() {
+  const { data } = await api.delete<ApiMessageResponse>('/api/v1/google-calendar/disconnect')
+  return data
 }

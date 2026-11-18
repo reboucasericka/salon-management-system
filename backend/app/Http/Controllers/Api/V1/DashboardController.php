@@ -33,13 +33,26 @@ class DashboardController extends Controller
         if ($user->role === UserRole::Client) {
             $clientId = $user->clientProfile?->id;
 
+            $upcomingQuery = Appointment::query()
+                ->where('client_id', $clientId)
+                ->where('start_time', '>=', now())
+                ->whereNot('status', Appointment::STATUS_CANCELED);
+
+            $nextAppointment = (clone $upcomingQuery)
+                ->with(['service', 'professional'])
+                ->orderBy('start_time')
+                ->first();
+
             return response()->json([
                 'data' => [
-                    'upcoming_appointments' => Appointment::query()
+                    'upcoming_appointments' => (clone $upcomingQuery)->count(),
+                    'completed_appointments' => Appointment::query()
                         ->where('client_id', $clientId)
-                        ->where('start_time', '>=', now())
-                        ->whereNot('status', Appointment::STATUS_CANCELED)
+                        ->where('status', Appointment::STATUS_COMPLETED)
                         ->count(),
+                    'next_appointment' => $nextAppointment
+                        ? new AppointmentResource($nextAppointment)
+                        : null,
                     'unread_notifications' => $user->notifications()->whereNull('read_at')->count(),
                 ],
             ]);

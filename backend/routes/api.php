@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Controllers\Api\V1\GoogleCalendarController;
 use App\Http\Controllers\Api\V1\AppointmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CashController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\CommissionController;
 use App\Http\Controllers\Api\V1\ContactMessageController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PayableController;
 use App\Http\Controllers\Api\V1\ProductCategoryController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\ProfessionalController;
@@ -14,11 +17,15 @@ use App\Http\Controllers\Api\V1\ProfessionalScheduleController;
 use App\Http\Controllers\Api\V1\ProfessionalServiceController;
 use App\Http\Controllers\Api\V1\PublicBookingController;
 use App\Http\Controllers\Api\V1\PublicCatalogController;
+use App\Http\Controllers\Api\V1\ReceivableController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\ServiceCategoryController;
 use App\Http\Controllers\Api\V1\ServiceController;
+use App\Http\Controllers\Api\V1\SettingController;
 use App\Http\Controllers\Api\V1\StockController;
 use App\Http\Controllers\Api\V1\StockMovementController;
+use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,14 +41,21 @@ Route::prefix('v1')->group(function () {
         Route::get('availability', [PublicBookingController::class, 'availability']);
         Route::post('appointments', [PublicBookingController::class, 'store']);
         Route::post('contact', [ContactMessageController::class, 'store']);
+        Route::get('settings', [SettingController::class, 'publicShow']);
     });
 
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])
+            ->middleware('throttle:5,1');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])
+            ->middleware('throttle:5,1');
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
+            Route::patch('profile', [AuthController::class, 'updateProfile']);
+            Route::put('password', [AuthController::class, 'updatePassword']);
             Route::post('logout', [AuthController::class, 'logout']);
         });
     });
@@ -53,8 +67,34 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('users', UserController::class);
             Route::apiResource('service-categories', ServiceCategoryController::class);
             Route::apiResource('product-categories', ProductCategoryController::class);
+            Route::apiResource('suppliers', SupplierController::class);
+            Route::apiResource('payables', PayableController::class);
+            Route::post('payables/{payable}/pay', [PayableController::class, 'pay']);
+            Route::apiResource('receivables', ReceivableController::class);
+            Route::post('receivables/{receivable}/receive', [ReceivableController::class, 'receive']);
+            Route::get('commissions', [CommissionController::class, 'index']);
+            Route::post('commissions/generate', [CommissionController::class, 'generate']);
             Route::get('contact-messages', [ContactMessageController::class, 'index']);
             Route::patch('contact-messages/{contactMessage}/read', [ContactMessageController::class, 'markAsRead']);
+            Route::get('settings', [SettingController::class, 'show']);
+            Route::patch('settings', [SettingController::class, 'update']);
+
+            Route::prefix('google-calendar')->group(function () {
+                Route::get('status', [GoogleCalendarController::class, 'status']);
+                Route::get('connect', [GoogleCalendarController::class, 'connect']);
+                Route::get('calendars', [GoogleCalendarController::class, 'calendars']);
+                Route::put('calendar', [GoogleCalendarController::class, 'selectCalendar']);
+                Route::delete('disconnect', [GoogleCalendarController::class, 'disconnect']);
+            });
+
+            Route::prefix('reports')->group(function () {
+                Route::get('overview', [ReportController::class, 'overview']);
+                Route::get('appointments', [ReportController::class, 'appointments']);
+                Route::get('sales', [ReportController::class, 'sales']);
+                Route::get('commissions', [ReportController::class, 'commissions']);
+                Route::get('financial', [ReportController::class, 'financial']);
+                Route::get('cash', [ReportController::class, 'cash']);
+            });
         });
 
         Route::apiResource('clients', ClientController::class);

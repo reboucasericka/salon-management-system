@@ -17,9 +17,10 @@ import {
   deleteProduct,
   fetchProductCategories,
   fetchProducts,
+  fetchSuppliers,
   updateProduct,
 } from '@/services/salonApi'
-import type { Product, ProductCategory } from '@/types/api'
+import type { Product, ProductCategory, Supplier } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 
@@ -29,6 +30,7 @@ const isAdmin = computed(() => auth.role === 'admin')
 
 const products = ref<Product[]>([])
 const categories = ref<ProductCategory[]>([])
+const suppliers = ref<Supplier[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const page = ref(1)
@@ -36,6 +38,7 @@ const lastPage = ref(1)
 const total = ref(0)
 const search = ref('')
 const categoryFilter = ref('')
+const supplierFilter = ref('')
 const modalOpen = ref(false)
 const editing = ref<Product | null>(null)
 const imageFile = ref<File | null>(null)
@@ -48,6 +51,7 @@ const form = reactive({
   sku: '',
   barcode: '',
   product_category_id: '',
+  supplier_id: '',
   price: '',
   cost_price: '',
   stock_quantity: '0',
@@ -60,18 +64,41 @@ const categoryOptions = computed(() => [
   ...categories.value.map((c) => ({ value: String(c.id), label: c.name })),
 ])
 
+const supplierFilterOptions = computed(() => [
+  { value: '', label: 'Todos os fornecedores' },
+  { value: '__none__', label: 'Sem fornecedor' },
+  ...suppliers.value.map((s) => ({ value: String(s.id), label: s.name })),
+])
+
 const formCategoryOptions = computed(() =>
   categories.value
     .filter((c) => c.is_active || c.id === editing.value?.product_category_id)
     .map((c) => ({ value: String(c.id), label: c.name })),
 )
 
+const formSupplierOptions = computed(() =>
+  suppliers.value
+    .filter((s) => s.is_active || s.id === editing.value?.supplier_id)
+    .map((s) => ({ value: String(s.id), label: s.name })),
+)
+
 function categoryName(product: Product) {
   return product.product_category?.name?.trim() || product.category?.trim() || 'Sem categoria'
 }
 
+function supplierName(product: Product) {
+  return product.supplier?.name?.trim() || 'Sem fornecedor'
+}
+
 function productImage(product: Product) {
   return mediaUrl(product.image_url || product.image) || IMAGES.placeholder
+}
+
+function onProductImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  if (img.dataset.fallback === '1') return
+  img.dataset.fallback = '1'
+  img.src = IMAGES.placeholder
 }
 
 function resetForm() {
@@ -80,6 +107,7 @@ function resetForm() {
   form.sku = ''
   form.barcode = ''
   form.product_category_id = ''
+  form.supplier_id = ''
   form.price = ''
   form.cost_price = ''
   form.stock_quantity = '0'
@@ -95,6 +123,9 @@ function openCreate() {
   if (categoryFilter.value && categoryFilter.value !== '__none__') {
     form.product_category_id = categoryFilter.value
   }
+  if (supplierFilter.value && supplierFilter.value !== '__none__') {
+    form.supplier_id = supplierFilter.value
+  }
   modalOpen.value = true
 }
 
@@ -105,6 +136,7 @@ function openEdit(product: Product) {
   form.sku = product.sku ?? ''
   form.barcode = product.barcode ?? ''
   form.product_category_id = product.product_category_id ? String(product.product_category_id) : ''
+  form.supplier_id = product.supplier_id ? String(product.supplier_id) : ''
   form.price = String(product.price)
   form.cost_price = product.cost_price ? String(product.cost_price) : ''
   form.stock_quantity = String(product.stock_quantity)
@@ -120,8 +152,19 @@ async function loadCategories() {
   try {
     const response = await fetchProductCategories({ per_page: 200 })
     categories.value = response.data ?? []
+  } catch (err) {
+    categories.value = []
+    ui.error(getErrorMessage(err, 'Não foi possível carregar as categorias de produto.'))
+  }
+}
+
+async function loadSuppliers() {
+  if (!isAdmin.value) return
+  try {
+    const response = await fetchSuppliers({ per_page: 200 })
+    suppliers.value = response.data ?? []
   } catch {
-    // Professional may not list categories; keep empty options.
+    suppliers.value = []
   }
 }
 
@@ -137,6 +180,11 @@ async function load() {
       params.product_category_id = 'null'
     } else if (categoryFilter.value) {
       params.product_category_id = Number(categoryFilter.value)
+    }
+    if (supplierFilter.value === '__none__') {
+      params.supplier_id = 'null'
+    } else if (supplierFilter.value) {
+      params.supplier_id = Number(supplierFilter.value)
     }
     const response = await fetchProducts(params)
     products.value = response.data ?? []
@@ -158,6 +206,7 @@ async function submit() {
       sku: form.sku || null,
       barcode: form.barcode || null,
       product_category_id: form.product_category_id ? Number(form.product_category_id) : null,
+      supplier_id: form.supplier_id ? Number(form.supplier_id) : null,
       price: form.price,
       cost_price: form.cost_price || null,
       stock_quantity: Number(form.stock_quantity),
@@ -231,7 +280,7 @@ function onSearch() {
 }
 
 onMounted(async () => {
-  await loadCategories()
+  await Promise.all([loadCategories(), loadSuppliers()])
   await load()
 })
 </script>
@@ -248,6 +297,13 @@ onMounted(async () => {
           :options="categoryOptions"
           class="min-w-[200px]"
         />
+        <AppSelect
+          v-if="isAdmin && suppliers.length"
+          v-model="supplierFilter"
+          label="Fornecedor"
+          :options="supplierFilterOptions"
+          class="min-w-[200px]"
+        />
         <AppButton type="submit" variant="secondary" class="self-end">Filtrar</AppButton>
       </form>
       <AppButton v-if="isAdmin" @click="openCreate">Novo produto</AppButton>
@@ -258,32 +314,38 @@ onMounted(async () => {
 
     <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <AppCard v-for="product in products" :key="product.id">
-        <div class="relative mb-4">
-          <img
-            :src="productImage(product)"
-            :alt="product.name"
-            class="h-36 w-full rounded-lg object-cover"
-          />
-          <span
-            v-if="product.is_low_stock"
-            class="absolute right-2 top-2 rounded-full bg-amber-500 px-2 py-1 text-xs font-semibold text-white"
-          >
-            Stock baixo
-          </span>
-        </div>
-        <div class="flex items-start justify-between gap-2">
-          <div>
-            <h3 class="font-semibold text-zinc-900">{{ product.name }}</h3>
-            <p class="mt-1 text-sm text-zinc-500">{{ categoryName(product) }}</p>
+        <div class="mb-4 flex items-start gap-3">
+          <div class="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+            <img
+              :src="productImage(product)"
+              alt=""
+              class="h-full w-full object-cover"
+              @error="onProductImageError"
+            />
+            <span
+              v-if="product.is_low_stock"
+              class="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+            >
+              Stock baixo
+            </span>
           </div>
-          <span
-            class="rounded-full px-2 py-1 text-xs font-medium"
-            :class="product.is_low_stock ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'"
-          >
-            {{ product.stock_quantity }} / min {{ product.min_stock }}
-          </span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h3 class="font-semibold text-zinc-900">{{ product.name }}</h3>
+                <p class="mt-1 text-sm text-zinc-500">{{ categoryName(product) }}</p>
+                <p class="mt-0.5 text-xs text-zinc-400">{{ supplierName(product) }}</p>
+              </div>
+              <span
+                class="shrink-0 rounded-full px-2 py-1 text-xs font-medium"
+                :class="product.is_low_stock ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'"
+              >
+                {{ product.stock_quantity }} / min {{ product.min_stock }}
+              </span>
+            </div>
+            <p class="mt-3 text-lg font-bold">{{ formatPrice(product.price) }}</p>
+          </div>
         </div>
-        <p class="mt-4 text-lg font-bold">{{ formatPrice(product.price) }}</p>
         <div v-if="isAdmin" class="mt-4 flex gap-2">
           <AppButton variant="secondary" class="flex-1" @click="openEdit(product)">Editar</AppButton>
           <AppButton variant="danger" @click="remove(product)">Desativar</AppButton>
@@ -309,6 +371,20 @@ onMounted(async () => {
           label="Categoria"
           :options="formCategoryOptions"
           empty-label="Sem categoria"
+          class="sm:col-span-2"
+        />
+        <p
+          v-if="isAdmin && !categories.length"
+          class="sm:col-span-2 -mt-2 text-xs text-amber-700"
+        >
+          Ainda não há categorias de produto. Em Categorias, abre o separador
+          <strong>Produtos</strong> (não Serviços) e cria as categorias aí.
+        </p>
+        <AppSelect
+          v-model="form.supplier_id"
+          label="Fornecedor"
+          :options="formSupplierOptions"
+          empty-label="Sem fornecedor"
           class="sm:col-span-2"
         />
         <AppInput v-model="form.price" label="Preço (€)" type="number" step="0.01" required />

@@ -1,5 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import {
+  acquireAdminStyles,
+  acquirePublicAssets,
+  releasePublicAssets,
+  routeNeedsAdminStyles,
+  routeNeedsPublicAssets,
+} from '@/lib/publicAssets'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -7,7 +14,7 @@ const router = createRouter({
     {
       path: '/',
       component: () => import('@/layouts/PublicLayout.vue'),
-      meta: { public: true },
+      meta: { public: true, shell: 'public' },
       children: [
         {
           path: '',
@@ -79,7 +86,7 @@ const router = createRouter({
     {
       path: '/login',
       component: () => import('@/layouts/AuthLayout.vue'),
-      meta: { guest: true, public: true },
+      meta: { guest: true, public: true, shell: 'auth' },
       children: [
         {
           path: '',
@@ -89,9 +96,33 @@ const router = createRouter({
       ],
     },
     {
+      path: '/forgot-password',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      meta: { guest: true, public: true, shell: 'auth' },
+      children: [
+        {
+          path: '',
+          name: 'forgot-password',
+          component: () => import('@/views/ForgotPasswordView.vue'),
+        },
+      ],
+    },
+    {
+      path: '/reset-password',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      meta: { guest: true, public: true, shell: 'auth' },
+      children: [
+        {
+          path: '',
+          name: 'reset-password',
+          component: () => import('@/views/ResetPasswordView.vue'),
+        },
+      ],
+    },
+    {
       path: '/register',
       component: () => import('@/layouts/AuthLayout.vue'),
-      meta: { guest: true, public: true },
+      meta: { guest: true, public: true, shell: 'auth' },
       children: [
         {
           path: '',
@@ -103,18 +134,31 @@ const router = createRouter({
     {
       path: '/panel',
       component: () => import('@/layouts/PanelLayout.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, shell: 'panel' },
       children: [
         {
           path: '',
           name: 'panel-home',
           component: () => import('@/views/PanelView.vue'),
-          meta: { roles: ['admin', 'professional'] },
+          meta: { roles: ['admin', 'professional'], shell: 'admin' },
+        },
+        {
+          path: 'account',
+          component: () => import('@/layouts/AdminLayout.vue'),
+          meta: { roles: ['admin', 'professional'], title: 'Minha conta', shell: 'admin' },
+          children: [
+            {
+              path: '',
+              name: 'panel-account',
+              component: () => import('@/views/account/AccountView.vue'),
+              meta: { title: 'Minha conta', shell: 'admin' },
+            },
+          ],
         },
         {
           path: 'admin',
           component: () => import('@/layouts/AdminLayout.vue'),
-          meta: { roles: ['admin', 'professional'] },
+          meta: { roles: ['admin', 'professional'], shell: 'admin' },
           children: [
             {
               path: '',
@@ -124,78 +168,120 @@ const router = createRouter({
               path: 'dashboard',
               name: 'admin-dashboard',
               component: () => import('@/views/admin/DashboardView.vue'),
+              meta: { title: 'Dashboard' },
             },
             {
               path: 'professionals',
               name: 'admin-professionals',
               component: () => import('@/views/admin/ProfessionalsView.vue'),
-              meta: { roles: ['admin'] },
+              meta: { roles: ['admin'], title: 'Profissionais' },
             },
             {
               path: 'clients',
               name: 'admin-clients',
               component: () => import('@/views/admin/ClientsView.vue'),
-              meta: { roles: ['admin', 'professional'] },
+              meta: { roles: ['admin', 'professional'], title: 'Clientes' },
             },
             {
               path: 'categories',
               name: 'admin-categories',
               component: () => import('@/views/admin/CategoriesView.vue'),
-              meta: { requiresAuth: true, roles: ['admin'] },
+              meta: { requiresAuth: true, roles: ['admin'], title: 'Categorias' },
             },
             {
               path: 'services',
               name: 'admin-services',
               component: () => import('@/views/admin/ServicesView.vue'),
-              meta: { roles: ['admin'] },
+              meta: { roles: ['admin'], title: 'Serviços' },
             },
             {
               path: 'appointments',
               name: 'admin-appointments',
               component: () => import('@/views/admin/AppointmentsView.vue'),
+              meta: { title: 'Agendamentos' },
             },
             {
               path: 'schedules',
               name: 'admin-professional-schedules',
               component: () => import('@/views/admin/ProfessionalSchedulesView.vue'),
-              meta: { roles: ['admin'] },
+              meta: { roles: ['admin'], title: 'Horários' },
             },
             {
               path: 'products',
               name: 'admin-products',
               component: () => import('@/views/admin/ProductsView.vue'),
-              meta: { roles: ['admin', 'professional'] },
+              meta: { roles: ['admin', 'professional'], title: 'Produtos' },
+            },
+            {
+              path: 'suppliers',
+              name: 'admin-suppliers',
+              component: () => import('@/views/admin/SuppliersView.vue'),
+              meta: { roles: ['admin'], title: 'Fornecedores' },
             },
             {
               path: 'stock',
               name: 'admin-stock',
               component: () => import('@/views/admin/StockView.vue'),
-              meta: { roles: ['admin', 'professional'] },
+              meta: { roles: ['admin', 'professional'], title: 'Stock' },
             },
             {
               path: 'sales',
               name: 'admin-sales',
               component: () => import('@/views/admin/SalesView.vue'),
-              meta: { roles: ['admin', 'professional'] },
+              meta: { roles: ['admin', 'professional'], title: 'Vendas' },
             },
             {
               path: 'cash',
               name: 'admin-cash',
               component: () => import('@/views/admin/CashView.vue'),
-              meta: { roles: ['admin', 'professional'] },
+              meta: { roles: ['admin', 'professional'], title: 'Caixa' },
+            },
+            {
+              path: 'payables',
+              name: 'admin-payables',
+              component: () => import('@/views/admin/PayablesView.vue'),
+              meta: { roles: ['admin'], title: 'Contas a pagar' },
+            },
+            {
+              path: 'receivables',
+              name: 'admin-receivables',
+              component: () => import('@/views/admin/ReceivablesView.vue'),
+              meta: { roles: ['admin'], title: 'Contas a receber' },
+            },
+            {
+              path: 'commissions',
+              name: 'admin-commissions',
+              component: () => import('@/views/admin/CommissionsView.vue'),
+              meta: { roles: ['admin'], title: 'Comissões' },
+            },
+            {
+              path: 'reports',
+              name: 'admin-reports',
+              component: () => import('@/views/admin/ReportsView.vue'),
+              meta: { roles: ['admin'], title: 'Relatórios' },
             },
             {
               path: 'messages',
               name: 'admin-messages',
               component: () => import('@/views/admin/ContactMessagesView.vue'),
-              meta: { roles: ['admin'] },
+              meta: { roles: ['admin'], title: 'Mensagens' },
+            },
+            {
+              path: 'settings',
+              name: 'admin-settings',
+              component: () => import('@/views/admin/SettingsView.vue'),
+              meta: { roles: ['admin'], title: 'Definições' },
+            },
+            {
+              path: 'profile',
+              redirect: { name: 'panel-account' },
             },
           ],
         },
         {
           path: 'client',
           component: () => import('@/layouts/ClientLayout.vue'),
-          meta: { roles: ['client'] },
+          meta: { roles: ['client'], shell: 'client' },
           children: [
             {
               path: '',
@@ -205,11 +291,19 @@ const router = createRouter({
               path: 'dashboard',
               name: 'client-dashboard',
               component: () => import('@/views/client/DashboardView.vue'),
+              meta: { title: 'Início', shell: 'client' },
             },
             {
               path: 'appointments',
               name: 'client-appointments',
               component: () => import('@/views/client/AppointmentsView.vue'),
+              meta: { title: 'Meus agendamentos', shell: 'client' },
+            },
+            {
+              path: 'account',
+              name: 'client-account',
+              component: () => import('@/views/account/AccountView.vue'),
+              meta: { title: 'Minha conta', shell: 'client' },
             },
           ],
         },
@@ -234,7 +328,7 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       component: () => import('@/layouts/PublicLayout.vue'),
-      meta: { public: true },
+      meta: { public: true, shell: 'public' },
       children: [
         {
           path: '',
@@ -246,9 +340,11 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
+  // Redirects primeiro: não adquirir Bootstrap numa rota que vamos abandonar
+  // (ex.: /login autenticado → Admin).
   if (to.meta.guest && auth.isAuthenticated) {
     return auth.homeRouteForRole(auth.role)
   }
@@ -265,6 +361,17 @@ router.beforeEach((to) => {
 
   if (allowedRoles.length && auth.role && !allowedRoles.includes(auth.role)) {
     return auth.homeRouteForRole(auth.role)
+  }
+
+  // Estado desejado da rota final — release é síncrono e corre ANTES do mount.
+  if (routeNeedsPublicAssets(to.matched)) {
+    await acquirePublicAssets()
+  } else {
+    releasePublicAssets()
+  }
+
+  if (routeNeedsAdminStyles(to.matched)) {
+    await acquireAdminStyles()
   }
 
   return true

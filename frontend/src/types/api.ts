@@ -66,6 +66,140 @@ export interface ProductCategory {
   updated_at?: string
 }
 
+export interface Supplier {
+  id: number
+  name: string
+  phone: string
+  email?: string | null
+  tax_id?: string | null
+  address?: string | null
+  delivery_time_days?: number | null
+  notes?: string | null
+  is_active: boolean
+  products_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export type PayableStatus = 'pending' | 'paid'
+export type PayableDisplayStatus = 'pending' | 'paid' | 'overdue'
+export type PayableType = 'expense' | 'commission' | 'supplier' | 'other'
+
+export interface Payable {
+  id: number
+  description: string
+  amount: string
+  due_date: string
+  paid_at?: string | null
+  status: PayableStatus
+  status_label: string
+  display_status: PayableDisplayStatus
+  display_status_label: string
+  is_overdue: boolean
+  is_paid: boolean
+  type: PayableType
+  type_label: string
+  notes?: string | null
+  supplier_id?: number | null
+  professional_id?: number | null
+  created_by?: number | null
+  paid_by?: number | null
+  supplier?: Pick<Supplier, 'id' | 'name' | 'is_active'> | null
+  professional?: Pick<Professional, 'id' | 'name'> | null
+  creator?: Pick<User, 'id' | 'full_name'> | null
+  payer?: Pick<User, 'id' | 'full_name'> | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface PayablePayload {
+  description: string
+  amount: number | string
+  due_date: string
+  type: PayableType
+  notes?: string | null
+  supplier_id?: number | null
+  professional_id?: number | null
+}
+
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other'
+export type SaleStatus = 'paid' | 'pending' | 'cancelled'
+
+export type ReceivableStatus = 'pending' | 'received'
+export type ReceivableDisplayStatus = 'pending' | 'received' | 'overdue'
+export type ReceivableReferenceFilter = 'service' | 'sale' | 'none'
+
+export interface Receivable {
+  id: number
+  description: string
+  amount: string
+  received_at?: string | null
+  status: ReceivableStatus
+  status_label: string
+  display_status: ReceivableDisplayStatus
+  display_status_label: string
+  is_overdue: boolean
+  is_received: boolean
+  payment_method: PaymentMethod
+  payment_method_label: string
+  client_id: number
+  professional_id: number
+  service_id?: number | null
+  sale_id?: number | null
+  created_by?: number | null
+  received_by?: number | null
+  reference_label?: string | null
+  client?: Pick<Client, 'id' | 'name' | 'is_active'> | null
+  professional?: Pick<Professional, 'id' | 'name'> | null
+  service?: Pick<Service, 'id' | 'name'> | null
+  sale?: Pick<Sale, 'id' | 'total_amount' | 'status'> | null
+  creator?: Pick<User, 'id' | 'full_name'> | null
+  receiver?: Pick<User, 'id' | 'full_name'> | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ReceivablePayload {
+  description: string
+  amount: number | string
+  payment_method: PaymentMethod
+  client_id: number
+  professional_id: number
+  service_id?: number | null
+  sale_id?: number | null
+}
+
+export interface CommissionPreviewRow {
+  origin: 'appointment'
+  origin_id: number
+  date: string | null
+  professional_id: number
+  professional?: Pick<Professional, 'id' | 'name'> | null
+  service_id: number
+  service?: Pick<Service, 'id' | 'name'> | null
+  base_amount: string
+  percentage: string
+  commission_amount: string
+  source: 'professional_service' | 'professional'
+  financial_status: 'calculated' | 'payable_pending' | 'paid' | string | null
+  payable_id?: number | null
+}
+
+export interface CommissionPreviewResponse {
+  data: CommissionPreviewRow[]
+  meta: {
+    mode: 'calculated_preview'
+    note: string
+    total_commission: string
+    count: number
+  }
+}
+
+export interface ProfessionalServiceSyncItem {
+  service_id: number
+  commission_percentage?: number | string | null
+}
+
 export interface Service {
   id: number
   name: string
@@ -79,6 +213,8 @@ export interface Service {
   image_url?: string | null
   is_active: boolean
   appointments_count?: number
+  /** Presente quando o serviço vem do vínculo professional_service. */
+  commission_percentage?: string | null
 }
 
 export interface Professional {
@@ -182,6 +318,10 @@ export interface Appointment {
   notes: string | null
   total_price: string | null
   is_active: boolean
+  google_event_id?: string | null
+  google_sync_status?: 'pending' | 'synced' | 'failed' | 'not_applicable' | null
+  google_synced_at?: string | null
+  google_sync_error?: string | null
   client?: Client
   service?: Service
   professional?: Professional
@@ -194,6 +334,8 @@ export interface Notification {
   type: string
   read_at: string | null
   is_read: boolean
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface DashboardData {
@@ -217,6 +359,8 @@ export interface DashboardData {
     upcoming_appointments: number
   }
   upcoming_appointments?: number
+  completed_appointments?: number
+  next_appointment?: Appointment | null
   unread_notifications?: number
 }
 
@@ -229,6 +373,8 @@ export interface Product {
   category: string | null
   product_category_id?: number | null
   product_category?: ProductCategory | null
+  supplier_id?: number | null
+  supplier?: Supplier | null
   price: string
   sale_price?: string
   cost_price: string | null
@@ -259,9 +405,6 @@ export interface StockMovement {
   product?: Product
   created_at: string
 }
-
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other'
-export type SaleStatus = 'paid' | 'pending' | 'cancelled'
 
 export interface SaleItem {
   id: number
@@ -332,3 +475,57 @@ export interface ApiMessageResponse<T = unknown> {
   message?: string
   data?: T
 }
+
+export interface SalonSettings {
+  id: number | null
+  salon_name: string | null
+  timezone: string | null
+  effective_timezone: string
+  currency: string
+  contact_email: string | null
+  contact_phone: string | null
+  address: string | null
+  reminder_24h_enabled: boolean
+  reminder_2h_enabled: boolean
+  is_persisted: boolean
+  updated_at: string | null
+}
+
+export interface PublicSalonSettings {
+  salon_name: string | null
+  timezone: string | null
+  currency: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  address: string | null
+}
+
+export type SalonSettingsPayload = Partial<{
+  salon_name: string | null
+  timezone: string | null
+  currency: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  address: string | null
+  reminder_24h_enabled: boolean
+  reminder_2h_enabled: boolean
+}>
+
+export interface GoogleCalendarStatus {
+  configured: boolean
+  connected: boolean
+  is_active: boolean
+  ready: boolean
+  google_account_email: string | null
+  calendar_id: string | null
+  calendar_name: string | null
+  last_synced_at: string | null
+  connected_by: number | null
+}
+
+export interface GoogleCalendarListItem {
+  id: string
+  name: string
+  primary: boolean
+}
+

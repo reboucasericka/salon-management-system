@@ -22,14 +22,15 @@ class ProductController extends Controller
         $this->authorize('viewAny', Product::class);
 
         $products = Product::query()
-            ->with('productCategory')
+            ->with(['productCategory', 'supplier'])
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = $request->string('search')->toString();
                 $query->where(function ($builder) use ($search) {
                     $builder->where('name', 'like', "%{$search}%")
                         ->orWhere('sku', 'like', "%{$search}%")
                         ->orWhere('category', 'like', "%{$search}%")
-                        ->orWhereHas('productCategory', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('productCategory', fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('supplier', fn ($q) => $q->where('name', 'like', "%{$search}%"));
                 });
             })
             ->when($request->filled('is_active'), fn ($q) => $q->where('is_active', $request->boolean('is_active')))
@@ -41,6 +42,15 @@ class ProductController extends Controller
                     return;
                 }
                 $query->where('product_category_id', (int) $value);
+            })
+            ->when($request->filled('supplier_id'), function ($query) use ($request) {
+                $value = $request->input('supplier_id');
+                if ($value === 'null' || $value === 'none') {
+                    $query->whereNull('supplier_id');
+
+                    return;
+                }
+                $query->where('supplier_id', (int) $value);
             })
             ->when($request->boolean('low_stock'), fn ($q) => $q->whereColumn('stock_quantity', '<=', 'min_stock'))
             ->orderBy('name')
@@ -65,7 +75,7 @@ class ProductController extends Controller
 
         return response()->json([
             'message' => 'Produto criado com sucesso.',
-            'data' => new ProductResource($product->load('productCategory')),
+            'data' => new ProductResource($product->load(['productCategory', 'supplier'])),
         ], 201);
     }
 
@@ -73,7 +83,7 @@ class ProductController extends Controller
     {
         $this->authorize('view', $product);
 
-        return response()->json(['data' => new ProductResource($product->load('productCategory'))]);
+        return response()->json(['data' => new ProductResource($product->load(['productCategory', 'supplier']))]);
     }
 
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
@@ -113,7 +123,7 @@ class ProductController extends Controller
 
         return response()->json([
             'message' => 'Produto atualizado com sucesso.',
-            'data' => new ProductResource($product->fresh()->load('productCategory')),
+            'data' => new ProductResource($product->fresh()->load(['productCategory', 'supplier'])),
         ]);
     }
 

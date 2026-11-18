@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { IMAGES } from '@/lib/images'
 
@@ -40,12 +40,7 @@ function isAboutSectionActive() {
   return isActive('/about') || isActive('/academy') ? 'active' : ''
 }
 
-onMounted(() => {
-  document.body.classList.add('legacy-site')
-})
-
 onUnmounted(() => {
-  document.body.classList.remove('legacy-site')
   document.body.style.overflow = 'auto'
 })
 </script>

@@ -27,6 +27,11 @@ class UpdateProductRequest extends ProductRequest
                 'integer',
                 Rule::exists('product_categories', 'id'),
             ],
+            'supplier_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('suppliers', 'id'),
+            ],
             'price' => ['sometimes', 'numeric', 'min:0'],
             'sale_price' => ['sometimes', 'numeric', 'min:0'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],

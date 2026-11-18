@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Http\Requests\Api\V1;
+
+use App\Enums\PayableType;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdatePayableRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'description' => ['sometimes', 'string', 'max:200'],
+            'amount' => ['sometimes', 'numeric', 'gt:0'],
+            'due_date' => ['sometimes', 'date'],
+            'type' => ['sometimes', Rule::enum(PayableType::class)],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'professional_id' => ['nullable', 'integer', 'exists:professionals,id'],
+        ];
+    }
+}

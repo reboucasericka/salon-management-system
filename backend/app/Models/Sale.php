@@ -46,6 +46,11 @@ class Sale extends Model
         return $this->hasMany(SaleItem::class);
     }
 
+    public function receivables(): HasMany
+    {
+        return $this->hasMany(Receivable::class);
+    }
+
     public function isPaid(): bool
     {
         return $this->status === SaleStatus::Paid;

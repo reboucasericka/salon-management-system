@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { IMAGES } from '@/lib/images'
+import { fetchPublicSettings } from '@/services/publicApi'
+import type { PublicSalonSettings } from '@/types/api'
 
 const usefulLinks = [
   { to: '/', label: 'Home' },
@@ -30,6 +33,31 @@ const socialLinks = [
     icon: 'fab fa-instagram',
   },
 ] as const
+
+const FALLBACK = {
+  salon_name: 'Ewellin Jordão Beauty',
+  address: 'R. Vale das Flores 23, Alto de São João\n3030-486 Coimbra — Portugal',
+  contact_email: 'ewellinjordao@gmail.com',
+  contact_phone: '(+351) 910 375 956',
+}
+
+const settings = ref<PublicSalonSettings | null>(null)
+
+onMounted(async () => {
+  try {
+    settings.value = await fetchPublicSettings()
+  } catch {
+    settings.value = null
+  }
+})
+
+const salonName = computed(
+  () => settings.value?.salon_name?.trim() || FALLBACK.salon_name,
+)
+const address = computed(() => settings.value?.address?.trim() || FALLBACK.address)
+const email = computed(() => settings.value?.contact_email?.trim() || FALLBACK.contact_email)
+const phone = computed(() => settings.value?.contact_phone?.trim() || FALLBACK.contact_phone)
+const phoneHref = computed(() => `tel:${phone.value.replace(/[^\d+]/g, '')}`)
 </script>
 
 <template>
@@ -40,19 +68,16 @@ const socialLinks = [
           <div class="item footer-brand">
             <div class="logo">
               <RouterLink to="/">
-                <img :src="IMAGES.aboutFooter" alt="Ewellin Jordão" />
+                <img :src="IMAGES.aboutFooter" :alt="salonName" />
               </RouterLink>
               <p class="footer-tagline">O olhar que marca.</p>
             </div>
-            <p class="footer-address">
-              R. Vale das Flores 23, Alto de São João<br />
-              3030-486 Coimbra — Portugal
+            <p class="footer-address" style="white-space: pre-line">{{ address }}</p>
+            <p>
+              <a :href="`mailto:${email}`">{{ email }}</a>
             </p>
             <p>
-              <a href="mailto:ewellinjordao@gmail.com">ewellinjordao@gmail.com</a>
-            </p>
-            <p>
-              <a href="tel:+351910375956">(+351) 910 375 956</a>
+              <a :href="phoneHref">{{ phone }}</a>
             </p>
             <div class="social">
               <a
@@ -93,7 +118,7 @@ const socialLinks = [
     </div>
     <div class="footer-bottom">
       <div class="wrapper">
-        <p>© {{ new Date().getFullYear() }} Ewellin Jordão Beauty · Coimbra, Portugal</p>
+        <p>© {{ new Date().getFullYear() }} {{ salonName }} · Coimbra, Portugal</p>
       </div>
     </div>
   </footer>

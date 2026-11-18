@@ -263,8 +263,9 @@ onMounted(load)
     </div>
 
     <div class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900">
-      Categorias estruturadas para serviços e produtos. Itens associados mantêm a relação; categorias
-      inativas deixam de aparecer em formulários públicos.
+      Usa o separador <strong>Serviços</strong> ou <strong>Produtos</strong> — são listas
+      independentes. Categorias de serviço só aparecem em Serviços; categorias de produto só em
+      Produtos. Categorias inativas deixam de aparecer nos formulários.
     </div>
 
     <div class="flex flex-wrap gap-2 border-b border-zinc-200 pb-1">

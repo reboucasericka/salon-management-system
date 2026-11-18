@@ -200,6 +200,19 @@ onMounted(async () => {
               {{ item.service?.name }} · {{ item.professional?.name }}
             </p>
             <p class="text-sm text-zinc-500">{{ formatDate(item.start_time) }}</p>
+            <p
+              v-if="item.google_sync_status === 'synced'"
+              class="mt-1 text-xs text-emerald-700"
+            >
+              Google Calendar: sincronizado
+            </p>
+            <p
+              v-else-if="item.google_sync_status === 'failed'"
+              class="mt-1 text-xs text-amber-700"
+              :title="item.google_sync_error ?? undefined"
+            >
+              Google Calendar: falha
+            </p>
           </div>
           <div class="flex flex-wrap gap-2">
             <AppButton variant="secondary" size="sm" @click="openEdit(item)">Editar</AppButton>
@@ -260,6 +273,18 @@ onMounted(async () => {
           ]"
         />
         <AppTextarea v-model="form.notes" label="Notas" :rows="2" />
+        <p
+          v-if="editing?.google_sync_status === 'synced'"
+          class="text-xs text-emerald-700"
+        >
+          Google Calendar: sincronizado
+        </p>
+        <p
+          v-else-if="editing?.google_sync_status === 'failed'"
+          class="text-xs text-amber-700"
+        >
+          Google Calendar: falha{{ editing.google_sync_error ? ` — ${editing.google_sync_error}` : '' }}
+        </p>
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <AppButton variant="secondary" type="button" @click="modalOpen = false">Fechar</AppButton>
           <AppButton type="submit" :loading="saving">Guardar</AppButton>

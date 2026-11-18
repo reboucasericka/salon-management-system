@@ -66,6 +66,11 @@ async function submit() {
           required
           autocomplete="current-password"
         />
+        <div class="mt-2 text-end">
+          <RouterLink :to="{ name: 'forgot-password' }" class="small">
+            Esqueci a password
+          </RouterLink>
+        </div>
       </div>
 
       <div class="d-grid gap-2 mb-3">

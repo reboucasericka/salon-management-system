@@ -1,11 +1,15 @@
 /// <reference types="vite/client" />
 
-import 'slick-carousel'
+import 'vue-router'
 
-declare module 'jquery' {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface JQuery<TElement = HTMLElement> {
-    slick(options?: object): this
-    slick(method: 'unslick'): this
+declare module 'vue-router' {
+  interface RouteMeta {
+    title?: string
+    public?: boolean
+    guest?: boolean
+    requiresAuth?: boolean
+    roles?: string[]
+    /** Isolamento visual: public/auth carregam legado; admin/client não. */
+    shell?: 'public' | 'auth' | 'admin' | 'client' | 'panel'
   }
 }

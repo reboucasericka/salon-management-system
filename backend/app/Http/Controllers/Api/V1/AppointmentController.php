@@ -9,7 +9,9 @@ use App\Http\Requests\Api\V1\UpdateAppointmentRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
 use App\Models\Service;
+use App\Services\AppointmentGoogleSyncService;
 use App\Services\AppointmentService;
+use App\Services\BookingEmailService;
 use App\Services\ProfessionalService;
 use App\Services\ProfessionalServiceAssignmentService;
 use Carbon\Carbon;
@@ -23,6 +25,8 @@ class AppointmentController extends Controller
         private readonly AppointmentService $appointmentService,
         private readonly ProfessionalService $professionalService,
         private readonly ProfessionalServiceAssignmentService $assignmentService,
+        private readonly BookingEmailService $bookingEmailService,
+        private readonly AppointmentGoogleSyncService $googleSync,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -84,9 +88,14 @@ class AppointmentController extends Controller
             'total_price' => $service->price,
         ]);
 
+        $appointment->load(['client', 'service', 'professional']);
+        $this->bookingEmailService->sendConfirmation($appointment);
+        $this->googleSync->sync($appointment->fresh(['client', 'service', 'professional']));
+        $appointment = $appointment->fresh()->load(['client', 'service', 'professional']);
+
         return response()->json([
             'message' => 'Agendamento criado com sucesso.',
-            'data' => new AppointmentResource($appointment->load(['client', 'service', 'professional'])),
+            'data' => new AppointmentResource($appointment),
         ], 201);
     }
 
@@ -95,7 +104,7 @@ class AppointmentController extends Controller
         $this->authorize('view', $appointment);
 
         return response()->json([
-            'data' => new AppointmentResource($appointment->load(['client', 'service', 'professional'])),
+            'data' => new AppointmentResource($appointment->load(['client', 'service', 'professional', 'reminders'])),
         ]);
     }
 
@@ -131,6 +140,8 @@ class AppointmentController extends Controller
             $endTime
         );
 
+        $wasCanceled = $appointment->status === Appointment::STATUS_CANCELED;
+
         $appointment->update([
             ...$data,
             'start_time' => $startTime,
@@ -138,9 +149,23 @@ class AppointmentController extends Controller
             'total_price' => $service->price,
         ]);
 
+        $appointment = $appointment->fresh()->load(['client', 'service', 'professional']);
+
+        if (
+            ! $wasCanceled
+            && $appointment->status === Appointment::STATUS_CANCELED
+        ) {
+            $this->bookingEmailService->sendCancellation($appointment);
+            $this->googleSync->remove($appointment);
+        } else {
+            $this->googleSync->sync($appointment);
+        }
+
+        $appointment = $appointment->fresh()->load(['client', 'service', 'professional']);
+
         return response()->json([
             'message' => 'Agendamento atualizado com sucesso.',
-            'data' => new AppointmentResource($appointment->fresh()->load(['client', 'service', 'professional'])),
+            'data' => new AppointmentResource($appointment),
         ]);
     }
 
@@ -148,10 +173,20 @@ class AppointmentController extends Controller
     {
         $this->authorize('delete', $appointment);
 
+        if ($appointment->status === Appointment::STATUS_CANCELED) {
+            return response()->json([
+                'message' => 'Agendamento já se encontra cancelado.',
+            ]);
+        }
+
         $appointment->update([
             'status' => Appointment::STATUS_CANCELED,
             'is_active' => false,
         ]);
+
+        $appointment->load(['client', 'service', 'professional']);
+        $this->bookingEmailService->sendCancellation($appointment);
+        $this->googleSync->remove($appointment->fresh(['client', 'service', 'professional']));
 
         return response()->json([
             'message' => 'Agendamento cancelado com sucesso.',

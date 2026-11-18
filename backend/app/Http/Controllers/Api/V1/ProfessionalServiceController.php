@@ -31,7 +31,7 @@ class ProfessionalServiceController extends Controller
 
         $professional = $this->assignmentService->sync(
             $professional,
-            $request->validated('service_ids'),
+            $request->syncPayload(),
         );
 
         return response()->json([
